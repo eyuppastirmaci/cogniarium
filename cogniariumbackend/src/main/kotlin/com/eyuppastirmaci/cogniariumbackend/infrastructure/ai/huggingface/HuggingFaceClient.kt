@@ -53,4 +53,25 @@ class HuggingFaceClient(
                 { error -> println("Title generation error: ${error.message}") }
             )
     }
+
+    /**
+     * Sends async summarization request with callback URL
+     */
+    fun summarizeAsync(input: String, callbackUrl: String) {
+        val body = mapOf(
+            "text" to input,
+            "callback_url" to callbackUrl
+        )
+
+        client.post()
+            .uri("/summarize")
+            .bodyValue(body)
+            .retrieve()
+            .bodyToMono(String::class.java)
+            .timeout(Duration.ofMillis(properties.timeout))
+            .subscribe(
+                { result -> println("Summarization completed: $result") },
+                { error -> println("Summarization error: ${error.message}") }
+            )
+    }
 }

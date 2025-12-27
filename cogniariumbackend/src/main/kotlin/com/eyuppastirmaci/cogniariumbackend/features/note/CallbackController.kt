@@ -51,5 +51,22 @@ class CallbackController(
         
         return ResponseEntity.ok(noteResponse)
     }
+
+    /**
+     * Callback endpoint for summarization results from AI service
+     */
+    @PostMapping("/summary/{noteId}")
+    fun updateSummary(
+        @PathVariable noteId: Long,
+        @RequestBody requestBody: Map<String, Any>
+    ): ResponseEntity<NoteResponse> {
+        val summary = requestBody["summary"] as? String
+            ?: throw IllegalStateException("Summary is required in request body")
+
+        val updatedNote = noteService.updateSummary(noteId, summary)
+        val noteResponse = noteMapper.toResponse(updatedNote)
+        
+        return ResponseEntity.ok(noteResponse)
+    }
 }
 

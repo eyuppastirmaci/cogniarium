@@ -9,7 +9,8 @@ data class BackendProperties(
 ) {
     data class CallbackPaths(
         val sentiment: String,
-        val title: String
+        val title: String,
+        val summary: String
     )
 }
 

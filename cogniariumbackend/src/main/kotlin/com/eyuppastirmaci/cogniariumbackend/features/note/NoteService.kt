@@ -38,9 +38,11 @@ class NoteService(
             // Fire async AI requests with callback URLs
             val sentimentCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.sentiment}/${savedNote.id}"
             val titleCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.title}/${savedNote.id}"
+            val summaryCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.summary}/${savedNote.id}"
 
             aiClient.analyzeSentiment(content, sentimentCallbackUrl)
             aiClient.generateTitleAsync(content, titleCallbackUrl)
+            aiClient.summarizeAsync(content, summaryCallbackUrl)
         }
     }
 
@@ -77,6 +79,23 @@ class NoteService(
         // Broadcast update via WebSocket
         val noteResponse = noteMapper.toResponse(savedNote)
         webSocketService.broadcastNoteUpdate(NoteUpdateType.TITLE_UPDATE, noteResponse)
+
+        return savedNote
+    }
+
+    /**
+     * Updates the summary of a note and broadcasts the change via WebSocket
+     */
+    fun updateSummary(noteId: Long, summary: String): Note {
+        val note = noteRepository.findById(noteId)
+            .orElseThrow { IllegalArgumentException("Note with id $noteId not found") }
+
+        val updatedNote = note.copy(summary = summary)
+        val savedNote = noteRepository.save(updatedNote)
+
+        // Broadcast update via WebSocket
+        val noteResponse = noteMapper.toResponse(savedNote)
+        webSocketService.broadcastNoteUpdate(NoteUpdateType.SUMMARY_UPDATE, noteResponse)
 
         return savedNote
     }

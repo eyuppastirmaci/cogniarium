@@ -78,6 +78,19 @@ const formattedDate = computed(() => {
       </div>
     </div>
 
+    <!-- Summary -->
+    <div v-if="note.summary" class="mb-3">
+      <p class="text-sm text-text-secondary italic leading-relaxed">
+        {{ note.summary }}
+      </p>
+    </div>
+    <div v-else-if="note.title" class="mb-3">
+      <div class="flex items-center gap-2 text-text-secondary text-xs">
+        <Loader2 :size="12" class="animate-spin" />
+        <span class="italic">Generating summary...</span>
+      </div>
+    </div>
+
     <div class="flex justify-between items-start mb-3">
       <span class="text-xs font-medium text-text-secondary">
         {{ formattedDate }}

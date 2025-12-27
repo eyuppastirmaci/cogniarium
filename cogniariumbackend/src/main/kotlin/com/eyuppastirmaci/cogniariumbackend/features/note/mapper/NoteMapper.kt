@@ -15,6 +15,7 @@ class NoteMapper {
             id = note.id,
             content = note.content,
             title = note.title,
+            summary = note.summary,
             sentimentLabel = note.sentimentLabel,
             sentimentScore = note.sentimentScore,
             createdAt = note.createdAt

@@ -21,3 +21,4 @@ backend:
   callbacks:
     sentiment: /api/callbacks/sentiment
     title: /api/callbacks/title
+    summary: /api/callbacks/summary

@@ -12,6 +12,9 @@ SENTIMENT_MODEL_NAME = "cardiffnlp/twitter-roberta-base-sentiment-latest"
 # Title Generation Model
 TITLE_MODEL_NAME = "google/flan-t5-base"
 
+# Summarization Model
+SUMMARY_MODEL_NAME = "facebook/bart-large-cnn"
+
 print(f"Loading sentiment model: {SENTIMENT_MODEL_NAME}...")
 try:
     sentiment_pipeline = pipeline("sentiment-analysis", model=SENTIMENT_MODEL_NAME)
@@ -32,6 +35,16 @@ except Exception as e:
     traceback.print_exc()
     raise
 
+print(f"Loading summarization model: {SUMMARY_MODEL_NAME}...")
+try:
+    summary_pipeline = pipeline("summarization", model=SUMMARY_MODEL_NAME)
+    print("Summarization model loaded successfully!")
+except Exception as e:
+    print(f"ERROR: Failed to load summarization model: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
+
 
 class SentimentRequest(BaseModel):
     text: str
@@ -39,6 +52,11 @@ class SentimentRequest(BaseModel):
 
 
 class TitleRequest(BaseModel):
+    text: str
+    callback_url: Optional[str] = None
+
+
+class SummarizeRequest(BaseModel):
     text: str
     callback_url: Optional[str] = None
 
@@ -146,4 +164,57 @@ def generate_title(request: TitleRequest, background_tasks: BackgroundTasks):
         if request.callback_url:
             background_tasks.add_task(send_callback, request.callback_url, response_data)
             return {"status": "processing", "message": "Title generation in progress"}
+        return response_data
+
+
+@app.post("/summarize")
+def summarize(request: SummarizeRequest, background_tasks: BackgroundTasks):
+    try:
+        text = request.text.strip()
+        word_count = len(text.split())
+        
+        # For very short texts, skip summarization or return a simple summary
+        if word_count <= 20:
+            # For very short texts, just return the text as summary
+            response_data = {"summary": text}
+            if request.callback_url:
+                background_tasks.add_task(send_callback, request.callback_url, response_data)
+                return {"status": "processing", "message": "Summarization in progress"}
+            return response_data
+        
+        # Calculate appropriate max_length and min_length based on text length
+        # Bart-large-cnn works best with max_length around 130 for news articles
+        # Adjust based on input length: roughly 1/3 of input length, but cap at reasonable values
+        text_length = len(text.split())
+        max_length = min(150, max(50, text_length // 3))
+        min_length = min(30, max(20, text_length // 6))
+        
+        result = summary_pipeline(
+            text,
+            max_length=max_length,
+            min_length=min_length,
+            do_sample=False
+        )[0]
+        
+        summary_text = result['summary_text'].strip()
+        response_data = {"summary": summary_text}
+        
+        if request.callback_url:
+            background_tasks.add_task(send_callback, request.callback_url, response_data)
+            return {"status": "processing", "message": "Summarization in progress"}
+        
+        return response_data
+    except Exception as e:
+        print(f"Error generating summary: {e}")
+        import traceback
+        traceback.print_exc()
+        # In case of error, use first 100 words as fallback summary
+        words = request.text.strip().split()
+        error_summary = ' '.join(words[:100])
+        if len(words) > 100:
+            error_summary += "..."
+        response_data = {"summary": error_summary}
+        if request.callback_url:
+            background_tasks.add_task(send_callback, request.callback_url, response_data)
+            return {"status": "processing", "message": "Summarization in progress"}
         return response_data

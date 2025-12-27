@@ -16,6 +16,9 @@ data class Note(
 
     val title: String? = null,
 
+    @Column(columnDefinition = "TEXT")
+    val summary: String? = null,
+
     @Enumerated(EnumType.STRING)
     val sentimentLabel: Sentiment? = null,
 
@@ -54,12 +57,13 @@ data class Note(
 
         /**
          * Creates an initial Note without AI-generated data.
-         * Title and sentiment will be generated asynchronously.
+         * Title, summary, and sentiment will be generated asynchronously.
          */
         fun createInitial(content: String): Note {
             return Note(
                 content = content,
                 title = null,
+                summary = null,
                 sentimentLabel = null,
                 sentimentScore = null
             )

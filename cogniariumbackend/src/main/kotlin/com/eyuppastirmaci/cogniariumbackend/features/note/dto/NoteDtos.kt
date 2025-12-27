@@ -23,6 +23,7 @@ data class NoteResponse(
     val id: Long?,
     val content: String,
     val title: String?,
+    val summary: String?,
     val sentimentLabel: Sentiment?,
     val sentimentScore: Double?,
     val createdAt: LocalDateTime

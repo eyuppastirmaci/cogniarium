@@ -33,6 +33,7 @@
       
       case NoteUpdateType.SENTIMENT_UPDATE:
       case NoteUpdateType.TITLE_UPDATE:
+      case NoteUpdateType.SUMMARY_UPDATE:
         // Update existing note
         const updateIndex = notes.value.findIndex(n => n.id === note.id);
         if (updateIndex !== -1) {

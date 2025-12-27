@@ -7,13 +7,15 @@ export enum SentimentLabel {
 export enum NoteUpdateType {
   NOTE_CREATED = 'NOTE_CREATED',
   SENTIMENT_UPDATE = 'SENTIMENT_UPDATE',
-  TITLE_UPDATE = 'TITLE_UPDATE'
+  TITLE_UPDATE = 'TITLE_UPDATE',
+  SUMMARY_UPDATE = 'SUMMARY_UPDATE'
 }
 
 export interface Note {
     id: number;
     content: string;
     title?: string | null;
+    summary?: string | null;
     sentimentLabel?: SentimentLabel | null;
     sentimentScore?: number | null;
     createdAt: string;
