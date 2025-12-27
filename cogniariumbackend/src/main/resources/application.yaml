@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: cogniarium-backend
+
+  # Default active profile is 'dev' unless specified otherwise at runtime
+  profiles:
+    active: dev
+
+webclient:
+  max-in-memory-size: 16MB
+
+# Hugging Face Configuration
+huggingface:
+  api:
+    url: http://localhost:8000/analyze
+    timeout: 30000

@@ -1,0 +1,45 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_URL}:${DB_PORT}/cogniarium_db
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    # 'validate': Checks if schema matches entities but changes nothing. Prevents data loss.
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # Disable console SQL logging for performance
+        show_sql: false
+        format_sql: false
+        # Enable query caching optimizations
+        cache:
+          use_second_level_cache: true
+
+  # Docker Compose support disabled in PROD (Infrastructure is managed externally)
+  docker:
+    compose:
+      enabled: false
+
+# Logging Configuration
+logging:
+  level:
+    root: WARN
+    # Only log important info and errors
+    com.eyuppastirmaci.cogniarium: INFO
+    org.springframework.web: ERROR
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "health,info"
+  endpoint:
+    health:
+      show-details: never

@@ -1,0 +1,45 @@
+services:
+  backend:
+    build: ./cogniariumbackend # Backend folder path
+    container_name: cogniarium-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/cogniarium_db
+      # Address where the backend will reach the AI service
+      - HUGGINGFACE_API_URL=http://ai-service:8000/analyze
+    depends_on:
+      db:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+
+  db:
+    image: postgres:15-alpine
+    container_name: cogniarium-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=cogniarium_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ai-service:
+    build: ./ai-service # AI service folder path
+    container_name: cogniarium-ai
+    ports:
+      - "8000:8000"
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+
+volumes:
+  postgres_data:
+  hf_cache:

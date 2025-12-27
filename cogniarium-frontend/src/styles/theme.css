@@ -1,0 +1,22 @@
+/* Tailwind Theme Configuration */
+@theme {
+  --color-bg-main: var(--bg-main);
+  --color-surface: var(--surface);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-hover: var(--brand-hover);
+
+  --color-sentiment-pos-bg: var(--sentiment-pos-bg);
+  --color-sentiment-pos-text: var(--sentiment-pos-text);
+
+  --color-sentiment-neg-bg: var(--sentiment-neg-bg);
+  --color-sentiment-neg-text: var(--sentiment-neg-text);
+
+  --color-sentiment-neu-bg: var(--sentiment-neu-bg);
+  --color-sentiment-neu-text: var(--sentiment-neu-text);
+}
+

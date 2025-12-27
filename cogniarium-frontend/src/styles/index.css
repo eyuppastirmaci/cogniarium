@@ -1,0 +1,20 @@
+/* Main Styles Entry Point */
+
+/* Tailwind CSS */
+@import "tailwindcss";
+
+/* Font Definitions */
+@import "./fonts.css";
+
+/* CSS Variables */
+@import "./variables.css";
+
+/* Tailwind Theme Configuration */
+@import "./theme.css";
+
+/* Base Styles */
+@import "./base.css";
+
+/* Component-specific Styles */
+@import "./components.css";
+

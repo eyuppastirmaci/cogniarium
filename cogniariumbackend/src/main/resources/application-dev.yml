@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    # Connects to localhost Docker container
+    url: jdbc:postgresql://localhost:5433/cogniarium_db
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    # 'update': Automatically updates schema changes (safe for dev)
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        # Logs SQL queries to console for debugging
+        show_sql: true
+        format_sql: true
+        # Detailed statistics
+        generate_statistics: false
+
+# Logging Configuration for DEV
+logging:
+  level:
+    root: INFO
+    # Show detailed logs for our application package
+    com.eyuppastirmaci.cogniarium: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+
+# Actuator: Expose all endpoints for easier debugging in DEV
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*" # WARN: Never do this in PROD
+  endpoint:
+    health:
+      show-details: always
