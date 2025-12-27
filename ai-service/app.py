@@ -7,18 +7,30 @@ from typing import Optional
 app = FastAPI()
 
 # Sentiment Analysis Model
-SENTIMENT_MODEL_NAME = "cardiffnlp/twitter-roberta-base-sentiment"
+SENTIMENT_MODEL_NAME = "cardiffnlp/twitter-roberta-base-sentiment-latest"
 
 # Title Generation Model
 TITLE_MODEL_NAME = "google/flan-t5-base"
 
 print(f"Loading sentiment model: {SENTIMENT_MODEL_NAME}...")
-sentiment_pipeline = pipeline("sentiment-analysis", model=SENTIMENT_MODEL_NAME)
-print("Sentiment model loaded!")
+try:
+    sentiment_pipeline = pipeline("sentiment-analysis", model=SENTIMENT_MODEL_NAME)
+    print("Sentiment model loaded successfully!")
+except Exception as e:
+    print(f"ERROR: Failed to load sentiment model: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
 
 print(f"Loading title generation model: {TITLE_MODEL_NAME}...")
-title_pipeline = pipeline("text2text-generation", model=TITLE_MODEL_NAME)
-print("Title generation model loaded!")
+try:
+    title_pipeline = pipeline("text2text-generation", model=TITLE_MODEL_NAME)
+    print("Title generation model loaded successfully!")
+except Exception as e:
+    print(f"ERROR: Failed to load title generation model: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
 
 
 class SentimentRequest(BaseModel):
@@ -65,15 +77,30 @@ def clean_title(title: str) -> str:
 
 @app.post("/analyze")
 def analyze_sentiment(request: SentimentRequest, background_tasks: BackgroundTasks):
-    result = sentiment_pipeline(request.text)[0]
-    label_map = {"LABEL_0": "NEGATIVE", "LABEL_1": "NEUTRAL", "LABEL_2": "POSITIVE"}
-    response_data = {"label": label_map.get(result['label'], result['label']), "score": result['score']}
-    
-    if request.callback_url:
-        background_tasks.add_task(send_callback, request.callback_url, response_data)
-        return {"status": "processing", "message": "Sentiment analysis in progress"}
-    
-    return response_data
+    try:
+        result = sentiment_pipeline(request.text)[0]
+        label = result.get('label', 'NEUTRAL')
+        # Ensure label is a string
+        if not isinstance(label, str):
+            label = str(label)
+        score = result.get('score', 0.0)
+        response_data = {"label": label.upper(), "score": float(score)}
+        
+        if request.callback_url:
+            background_tasks.add_task(send_callback, request.callback_url, response_data)
+            return {"status": "processing", "message": "Sentiment analysis in progress"}
+        
+        return response_data
+    except Exception as e:
+        print(f"Error analyzing sentiment: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return neutral sentiment as fallback
+        error_response = {"label": "NEUTRAL", "score": 0.0}
+        if request.callback_url:
+            background_tasks.add_task(send_callback, request.callback_url, error_response)
+            return {"status": "processing", "message": "Sentiment analysis in progress"}
+        return error_response
 
 
 @app.post("/generate-title")
