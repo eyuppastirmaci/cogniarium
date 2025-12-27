@@ -16,7 +16,7 @@ class NoteController(
 
     @PostMapping
     fun createNote(@Valid @RequestBody request: CreateNoteRequest): Mono<NoteResponse> {
-        return noteService.createSmartNote(request.text)
+        return noteService.createNote(request.text)
             .map { noteMapper.toResponse(it) }
     }
 

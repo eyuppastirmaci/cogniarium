@@ -4,7 +4,6 @@ import com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.huggingface.config
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
-import reactor.core.publisher.Mono
 import java.time.Duration
 
 @Service
@@ -13,19 +12,45 @@ class HuggingFaceClient(
     private val properties: HuggingFaceProperties
 ) {
 
-    fun analyze(input: String): Mono<String> {
+    /**
+     * Sends async sentiment analysis request with callback URL
+     */
+    fun analyzeSentiment(input: String, callbackUrl: String) {
+        val body = mapOf(
+            "text" to input,
+            "callback_url" to callbackUrl
+        )
 
-        // ai-service input expects text
-        val body = mapOf("text" to input)
-
-        return client.post()
-            .uri("")
+        client.post()
+            .uri("/analyze")
             .bodyValue(body)
             .retrieve()
             .bodyToMono(String::class.java)
             .timeout(Duration.ofMillis(properties.timeout))
-            .doOnError { e ->
-                println("Local AI Service Error: ${e.message}")
-            }
+            .subscribe(
+                { result -> println("Sentiment analysis completed: $result") },
+                { error -> println("Sentiment analysis error: ${error.message}") }
+            )
+    }
+
+    /**
+     * Sends async title generation request with callback URL
+     */
+    fun generateTitleAsync(input: String, callbackUrl: String) {
+        val body = mapOf(
+            "text" to input,
+            "callback_url" to callbackUrl
+        )
+
+        client.post()
+            .uri("/generate-title")
+            .bodyValue(body)
+            .retrieve()
+            .bodyToMono(String::class.java)
+            .timeout(Duration.ofMillis(properties.timeout))
+            .subscribe(
+                { result -> println("Title generation completed: $result") },
+                { error -> println("Title generation error: ${error.message}") }
+            )
     }
 }

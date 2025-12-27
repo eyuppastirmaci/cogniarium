@@ -1,5 +1,6 @@
 package com.eyuppastirmaci.cogniariumbackend.features.note.dto
 
+import com.eyuppastirmaci.cogniariumbackend.features.note.NoteUpdateType
 import com.eyuppastirmaci.cogniariumbackend.features.note.Sentiment
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -21,7 +22,16 @@ data class CreateNoteRequest(
 data class NoteResponse(
     val id: Long?,
     val content: String,
-    val sentimentLabel: Sentiment,
-    val sentimentScore: Double,
+    val title: String?,
+    val sentimentLabel: Sentiment?,
+    val sentimentScore: Double?,
     val createdAt: LocalDateTime
+)
+
+/**
+ * DTO for WebSocket messages
+ */
+data class NoteUpdateMessage(
+    val type: NoteUpdateType,
+    val note: NoteResponse
 )

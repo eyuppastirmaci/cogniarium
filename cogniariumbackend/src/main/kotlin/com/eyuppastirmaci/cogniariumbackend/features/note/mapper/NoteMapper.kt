@@ -14,6 +14,7 @@ class NoteMapper {
         return NoteResponse(
             id = note.id,
             content = note.content,
+            title = note.title,
             sentimentLabel = note.sentimentLabel,
             sentimentScore = note.sentimentScore,
             createdAt = note.createdAt

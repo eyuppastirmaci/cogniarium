@@ -29,8 +29,10 @@ class WebClientConfig(
 
     @Bean
     fun huggingFaceWebClient(builder: WebClient.Builder): WebClient {
+        // Extract base URL (remove /analyze if present)
+        val baseUrl = huggingFaceProperties.url.replace("/analyze", "").replace("/generate-title", "")
         return builder
-            .baseUrl(huggingFaceProperties.url)
+            .baseUrl(baseUrl)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
             .build()
     }

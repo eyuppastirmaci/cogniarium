@@ -1,7 +1,9 @@
 <script setup lang="ts">
-  import { ref, onMounted, TransitionGroup } from 'vue';
+  import { ref, onMounted, onUnmounted, TransitionGroup } from 'vue';
   import { noteService } from '@/features/notes/api/noteService';
-  import type { Note } from '@/features/notes/types/Note';
+  import { websocketService } from '@/features/notes/api/websocketService';
+  import type { Note, NoteUpdateMessage } from '@/features/notes/types/Note';
+  import { NoteUpdateType } from '@/features/notes/types/Note';
   import NoteInput from '@/features/notes/components/NoteInput.vue';
   import NoteCard from '@/features/notes/components/NoteCard.vue';
   import { Sparkles } from 'lucide-vue-next';
@@ -16,16 +18,42 @@
       console.error('Failed to load notes', err);
     }
   };
+
+  const handleWebSocketUpdate = (message: NoteUpdateMessage) => {
+    const { type, note } = message;
+
+    switch (type) {
+      case NoteUpdateType.NOTE_CREATED:
+        // Check if note already exists (avoid duplicates)
+        const existingIndex = notes.value.findIndex(n => n.id === note.id);
+        if (existingIndex === -1) {
+          notes.value = [note, ...notes.value];
+        }
+        break;
+      
+      case NoteUpdateType.SENTIMENT_UPDATE:
+      case NoteUpdateType.TITLE_UPDATE:
+        // Update existing note
+        const updateIndex = notes.value.findIndex(n => n.id === note.id);
+        if (updateIndex !== -1) {
+          notes.value[updateIndex] = note;
+          // Create new array to trigger reactivity
+          notes.value = [...notes.value];
+        }
+        break;
+    }
+  };
   
   const handleSaveNote = async (text: string) => {
     loading.value = true;
     try {
-      const newNote = await noteService.createNote(text);
-      notes.value = [newNote, ...notes.value];
+      // Create note - WebSocket will handle adding it to the list
+      await noteService.createNote(text);
+      // Optionally refresh to get the latest state
       await fetchNotes();
     } catch (err) {
       console.error('Failed to save note', err);
-      alert('Error connecting toservice');
+      alert('Error connecting to service');
     } finally {
       loading.value = false;
     }
@@ -33,6 +61,14 @@
   
   onMounted(() => {
     fetchNotes();
+    
+    // Setup WebSocket connection and message handler
+    websocketService.onNoteUpdate(handleWebSocketUpdate);
+    websocketService.connect();
+  });
+
+  onUnmounted(() => {
+    websocketService.disconnect();
   });
   </script>
   

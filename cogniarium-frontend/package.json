@@ -9,9 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.0.0",
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.2",
     "lucide-vue-next": "^0.562.0",
+    "sockjs-client": "^1.6.1",
     "tailwindcss": "^4.1.18",
     "vue": "^3.5.24"
   },

@@ -13,4 +13,11 @@ webclient:
 huggingface:
   api:
     url: http://localhost:8000/analyze
-    timeout: 30000
+    timeout: 60000
+
+# Backend Configuration
+backend:
+  base-url: ${BACKEND_BASE_URL:http://host.docker.internal:8080}
+  callbacks:
+    sentiment: /api/callbacks/sentiment
+    title: /api/callbacks/title

@@ -17,9 +17,9 @@ It allows you to search your notes semantically, generate titles and summaries, 
 ## Technical Details
 
 - PostgreSQL + pgvector for vector embeddings
-- Python AI Microservice using `google/flan-t5-small` for title generation and summarization, `cardiffnlp/twitter-roberta-base-sentiment` for sentiment analysis
+- Python AI Microservice using `google/flan-t5-base` for title generation and summarization, `cardiffnlp/twitter-roberta-base-sentiment` for sentiment analysis
 - All operations run locally within the Docker network
-- Lightweight models selected for a balance between performance and quality
+- Optimized models selected for a balance between performance and quality
 
 ---
 
