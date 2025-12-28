@@ -4,6 +4,7 @@ enum class NoteUpdateType {
     NOTE_CREATED,
     SENTIMENT_UPDATE,
     TITLE_UPDATE,
-    SUMMARY_UPDATE
+    SUMMARY_UPDATE,
+    EMBEDDING_UPDATE
 }
 

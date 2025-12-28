@@ -1,6 +1,7 @@
 from fastapi import FastAPI, BackgroundTasks
 from pydantic import BaseModel
 from transformers import pipeline
+from sentence_transformers import SentenceTransformer
 import httpx
 from typing import Optional
 
@@ -14,6 +15,9 @@ TITLE_MODEL_NAME = "google/flan-t5-base"
 
 # Summarization Model
 SUMMARY_MODEL_NAME = "facebook/bart-large-cnn"
+
+# Embedding Model
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 print(f"Loading sentiment model: {SENTIMENT_MODEL_NAME}...")
 try:
@@ -45,6 +49,16 @@ except Exception as e:
     traceback.print_exc()
     raise
 
+print(f"Loading embedding model: {EMBEDDING_MODEL_NAME}...")
+try:
+    embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
+    print("Embedding model loaded successfully!")
+except Exception as e:
+    print(f"ERROR: Failed to load embedding model: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
+
 
 class SentimentRequest(BaseModel):
     text: str
@@ -57,6 +71,11 @@ class TitleRequest(BaseModel):
 
 
 class SummarizeRequest(BaseModel):
+    text: str
+    callback_url: Optional[str] = None
+
+
+class EmbeddingRequest(BaseModel):
     text: str
     callback_url: Optional[str] = None
 
@@ -218,3 +237,36 @@ def summarize(request: SummarizeRequest, background_tasks: BackgroundTasks):
             background_tasks.add_task(send_callback, request.callback_url, response_data)
             return {"status": "processing", "message": "Summarization in progress"}
         return response_data
+
+
+@app.post("/generate-embedding")
+def generate_embedding(request: EmbeddingRequest, background_tasks: BackgroundTasks):
+    try:
+        text = request.text.strip()
+        
+        if not text:
+            raise ValueError("Text cannot be empty")
+        
+        # Generate embedding using sentence-transformers
+        # Returns a numpy array, convert to list of floats
+        embedding = embedding_model.encode(text, convert_to_numpy=True)
+        embedding_list = embedding.tolist()
+        
+        response_data = {"embedding": embedding_list}
+        
+        if request.callback_url:
+            background_tasks.add_task(send_callback, request.callback_url, response_data)
+            return {"status": "processing", "message": "Embedding generation in progress"}
+        
+        return response_data
+    except Exception as e:
+        print(f"Error generating embedding: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return empty embedding as fallback (384 zeros for all-MiniLM-L6-v2)
+        error_embedding = [0.0] * 384
+        error_response = {"embedding": error_embedding}
+        if request.callback_url:
+            background_tasks.add_task(send_callback, request.callback_url, error_response)
+            return {"status": "processing", "message": "Embedding generation in progress"}
+        return error_response

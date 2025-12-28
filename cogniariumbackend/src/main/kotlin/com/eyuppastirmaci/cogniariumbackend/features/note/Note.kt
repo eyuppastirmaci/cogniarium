@@ -24,6 +24,10 @@ data class Note(
 
     val sentimentScore: Double? = null,
 
+    @Column(name = "embedding", columnDefinition = "vector(384)", nullable = true, insertable = false, updatable = false)
+    @Convert(converter = VectorConverter::class)
+    val embedding: List<Float>? = null,
+
     val createdAt: LocalDateTime = LocalDateTime.now()
 ) {
     companion object {

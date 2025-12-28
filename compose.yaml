@@ -1,6 +1,41 @@
 services:
+  # Base services (always run): Database and AI Service
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: cogniarium-db
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_DB=cogniarium_db
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: cogniarium-ai
+    ports:
+      - "8000:8000"
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    restart: unless-stopped
+
+  # Optional services (use --profile full to enable)
   backend:
-    build: ./cogniariumbackend # Backend folder path
+    profiles: ["full"]
+    build:
+      context: ./cogniariumbackend
+      dockerfile: Dockerfile
     container_name: cogniarium-backend
     ports:
       - "8080:8080"
@@ -16,31 +51,19 @@ services:
         condition: service_healthy
       ai-service:
         condition: service_started
+    restart: unless-stopped
 
-  db:
-    image: postgres:15-alpine
-    container_name: cogniarium-db
+  frontend:
+    profiles: ["full"]
+    build:
+      context: ./cogniarium-frontend
+      dockerfile: Dockerfile
+    container_name: cogniarium-frontend
     ports:
-      - "5433:5432"
-    environment:
-      - POSTGRES_DB=cogniarium_db
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  ai-service:
-    build: ./ai-service # AI service folder path
-    container_name: cogniarium-ai
-    ports:
-      - "8000:8000"
-    volumes:
-      - hf_cache:/root/.cache/huggingface
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
 
 volumes:
   postgres_data:

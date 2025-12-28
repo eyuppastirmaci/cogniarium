@@ -22,3 +22,9 @@ backend:
     sentiment: /api/callbacks/sentiment
     title: /api/callbacks/title
     summary: /api/callbacks/summary
+    embedding: /api/callbacks/embedding
+  search:
+    # Maximum cosine distance for semantic search (0.0 = identical, 1.0 = completely different)
+    # Lower = stricter matching, Higher = more lenient matching
+    # Recommended: 0.6-0.8 for balanced results (0.7 is a good default)
+    max-similarity-distance: 0.7

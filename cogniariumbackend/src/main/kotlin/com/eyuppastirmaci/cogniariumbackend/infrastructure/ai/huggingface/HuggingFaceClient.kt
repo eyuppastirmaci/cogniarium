@@ -1,5 +1,6 @@
 package com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.huggingface
 
+import com.eyuppastirmaci.cogniariumbackend.exception.EmbeddingGenerationException
 import com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.huggingface.config.HuggingFaceProperties
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
@@ -73,5 +74,67 @@ class HuggingFaceClient(
                 { result -> println("Summarization completed: $result") },
                 { error -> println("Summarization error: ${error.message}") }
             )
+    }
+
+    /**
+     * Sends async embedding generation request with callback URL
+     */
+    fun generateEmbeddingAsync(input: String, callbackUrl: String) {
+        val body = mapOf(
+            "text" to input,
+            "callback_url" to callbackUrl
+        )
+
+        client.post()
+            .uri("/generate-embedding")
+            .bodyValue(body)
+            .retrieve()
+            .bodyToMono(String::class.java)
+            .timeout(Duration.ofMillis(properties.timeout))
+            .subscribe(
+                { result -> println("Embedding generation completed: $result") },
+                { error -> println("Embedding generation error: ${error.message}") }
+            )
+    }
+
+    /**
+     * Synchronously generates embedding for a text query.
+     * Used for search operations where we need immediate results.
+     * 
+     * @throws EmbeddingGenerationException if embedding generation fails
+     */
+    fun generateEmbeddingSync(input: String): List<Float> {
+        val body = mapOf(
+            "text" to input
+            // No callback_url for sync calls
+        )
+
+        val response = client.post()
+            .uri("/generate-embedding")
+            .bodyValue(body)
+            .retrieve()
+            .bodyToMono(Map::class.java)
+            .timeout(Duration.ofMillis(properties.timeout))
+            .block()
+            ?: throw EmbeddingGenerationException("Failed to generate embedding: No response from AI service")
+
+        @Suppress("UNCHECKED_CAST")
+        val embeddingList = response["embedding"] as? List<*>
+            ?: throw EmbeddingGenerationException("Failed to generate embedding: Invalid response format")
+        
+        val embedding = embeddingList.mapNotNull { value ->
+            when (value) {
+                is Number -> value.toFloat()
+                is Double -> value.toFloat()
+                is Float -> value
+                else -> null
+            }
+        }
+        
+        if (embedding.isEmpty()) {
+            throw EmbeddingGenerationException("Failed to generate embedding: Empty embedding list")
+        }
+        
+        return embedding
     }
 }

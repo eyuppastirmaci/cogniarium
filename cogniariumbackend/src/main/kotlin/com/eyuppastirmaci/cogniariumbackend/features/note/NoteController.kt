@@ -25,4 +25,17 @@ class NoteController(
         val notes = noteService.getAllNotes()
         return noteMapper.toResponseList(notes)
     }
+
+    @GetMapping("/search")
+    fun searchNotes(@RequestParam(required = false) q: String?): List<NoteResponse> {
+        // If query is empty or null, return normal list
+        if (q.isNullOrBlank()) {
+            val notes = noteService.getAllNotes()
+            return noteMapper.toResponseList(notes)
+        }
+
+        // Perform semantic search
+        val notes = noteService.searchNotesSemantically(q, limit = 20)
+        return noteMapper.toResponseList(notes)
+    }
 }

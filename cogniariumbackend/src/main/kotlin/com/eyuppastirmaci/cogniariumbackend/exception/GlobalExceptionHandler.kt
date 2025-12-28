@@ -49,6 +49,24 @@ class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse)
     }
 
+    @ExceptionHandler(EmbeddingGenerationException::class)
+    fun handleEmbeddingGenerationException(
+        ex: EmbeddingGenerationException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
+        logger.error("Embedding generation failed: {}", ex.message, ex)
+        
+        val errorResponse = ErrorResponse(
+            timestamp = LocalDateTime.now(),
+            status = HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            error = "Internal Server Error",
+            message = ex.message ?: "Failed to generate embedding",
+            path = request.requestURI
+        )
+        
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse)
+    }
+
     @ExceptionHandler(Exception::class)
     fun handleGenericException(
         ex: Exception,

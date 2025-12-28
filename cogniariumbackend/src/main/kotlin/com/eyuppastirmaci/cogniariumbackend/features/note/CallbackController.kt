@@ -68,5 +68,37 @@ class CallbackController(
         
         return ResponseEntity.ok(noteResponse)
     }
+
+    /**
+     * Callback endpoint for embedding generation results from AI service
+     */
+    @PostMapping("/embedding/{noteId}")
+    fun updateEmbedding(
+        @PathVariable noteId: Long,
+        @RequestBody requestBody: Map<String, Any>
+    ): ResponseEntity<NoteResponse> {
+        @Suppress("UNCHECKED_CAST")
+        val embeddingList = requestBody["embedding"] as? List<*>
+            ?: throw IllegalStateException("Embedding is required in request body")
+        
+        // Convert List<*> to List<Float>
+        val embedding = embeddingList.mapNotNull { value ->
+            when (value) {
+                is Number -> value.toFloat()
+                is Double -> value.toFloat()
+                is Float -> value
+                else -> null
+            }
+        }
+        
+        if (embedding.isEmpty()) {
+            throw IllegalStateException("Embedding list cannot be empty")
+        }
+
+        val updatedNote = noteService.updateEmbedding(noteId, embedding)
+        val noteResponse = noteMapper.toResponse(updatedNote)
+        
+        return ResponseEntity.ok(noteResponse)
+    }
 }
 

@@ -11,5 +11,12 @@ export const noteService = {
     const payload: CreateNoteRequest = { text };
     const response = await apiClient.post<Note>('/notes', payload);
     return response.data;
+  },
+
+  async searchNotes(query: string): Promise<Note[]> {
+    const response = await apiClient.get<Note[]>('/notes/search', {
+      params: { q: query }
+    });
+    return response.data;
   }
 };
