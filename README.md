@@ -12,13 +12,13 @@ It allows you to search your notes semantically, generate titles and summaries, 
 
 ## Features
 
-- **Sentiment Analysis:** Analyze the emotional tone of your notes (Positive, Negative, Neutral).
+- 📊 **Sentiment Analysis:** Analyze the emotional tone of your notes (Positive, Negative, Neutral).
 
-- **Title Generation:** Automatically generate short, context-aware titles for your notes based on their content.
+- ✏️ **Title Generation:** Automatically generate short, context-aware titles for your notes based on their content.
 
-- **Summarize:** Automatically generate concise summaries of your longer notes.
+- 📄 **Summarize:** Automatically generate concise summaries of your longer notes.
 
-- **Semantic Search:** Search your notes by meaning rather than keyword matching. A search for "cooking attempts" can find notes containing "burnt lasagna recipe" even without exact keyword overlap.
+- 🔍 **Semantic Search:** Search your notes by meaning rather than keyword matching. A search for "cooking attempts" can find notes containing "burnt lasagna recipe" even without exact keyword overlap.
 
 ## Technical Details
 
