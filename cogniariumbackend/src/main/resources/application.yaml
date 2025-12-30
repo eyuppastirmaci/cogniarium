@@ -9,8 +9,8 @@ spring:
 webclient:
   max-in-memory-size: 16MB
 
-# Hugging Face Configuration
-huggingface:
+# AI Service Configuration
+aiservice:
   api:
     url: http://localhost:8000/analyze
     timeout: 60000

@@ -6,6 +6,8 @@ export enum SentimentLabel {
 
 export enum NoteUpdateType {
   NOTE_CREATED = 'NOTE_CREATED',
+  NOTE_UPDATED = 'NOTE_UPDATED',
+  NOTE_DELETED = 'NOTE_DELETED',
   SENTIMENT_UPDATE = 'SENTIMENT_UPDATE',
   TITLE_UPDATE = 'TITLE_UPDATE',
   SUMMARY_UPDATE = 'SUMMARY_UPDATE',
@@ -27,6 +29,6 @@ export interface NoteUpdateMessage {
     note: Note;
 }
   
-export interface CreateNoteRequest {
+export interface NoteRequest {
     text: string;
 }

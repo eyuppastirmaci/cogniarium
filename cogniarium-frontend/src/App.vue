@@ -101,6 +101,16 @@
         }
         break;
       
+      case NoteUpdateType.NOTE_DELETED:
+        // Remove note from list
+        notes.value = notes.value.filter(n => n.id !== note.id);
+        // Also remove from search results if currently searching
+        if (searchQuery.value.trim()) {
+          searchResults.value = searchResults.value.filter(n => n.id !== note.id);
+        }
+        break;
+      
+      case NoteUpdateType.NOTE_UPDATED:
       case NoteUpdateType.SENTIMENT_UPDATE:
       case NoteUpdateType.TITLE_UPDATE:
       case NoteUpdateType.SUMMARY_UPDATE:

@@ -1,16 +1,16 @@
-package com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.huggingface
+package com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.aiservice
 
 import com.eyuppastirmaci.cogniariumbackend.exception.EmbeddingGenerationException
-import com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.huggingface.config.HuggingFaceProperties
+import com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.aiservice.config.AiServiceProperties
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import java.time.Duration
 
 @Service
-class HuggingFaceClient(
-    @Qualifier("huggingFaceWebClient") private val client: WebClient,
-    private val properties: HuggingFaceProperties
+class AiServiceClient(
+    @Qualifier("aiServiceWebClient") private val client: WebClient,
+    private val properties: AiServiceProperties
 ) {
 
     /**
@@ -138,3 +138,4 @@ class HuggingFaceClient(
         return embedding
     }
 }
+

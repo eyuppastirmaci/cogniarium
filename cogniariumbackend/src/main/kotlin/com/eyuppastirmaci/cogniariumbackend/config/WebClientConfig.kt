@@ -1,7 +1,7 @@
 package com.eyuppastirmaci.cogniariumbackend.config
 
 import com.eyuppastirmaci.cogniariumbackend.config.properties.WebClientProperties
-import com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.huggingface.config.HuggingFaceProperties
+import com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.aiservice.config.AiServiceProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpHeaders
@@ -12,7 +12,7 @@ import org.springframework.web.reactive.function.client.WebClient
 @Configuration
 class WebClientConfig(
     private val webClientProperties: WebClientProperties,
-    private val huggingFaceProperties: HuggingFaceProperties
+    private val aiServiceProperties: AiServiceProperties
 ) {
 
     @Bean
@@ -28,9 +28,9 @@ class WebClientConfig(
     }
 
     @Bean
-    fun huggingFaceWebClient(builder: WebClient.Builder): WebClient {
+    fun aiServiceWebClient(builder: WebClient.Builder): WebClient {
         // Extract base URL (remove /analyze if present)
-        val baseUrl = huggingFaceProperties.url.replace("/analyze", "").replace("/generate-title", "")
+        val baseUrl = aiServiceProperties.url.replace("/analyze", "").replace("/generate-title", "")
         return builder
             .baseUrl(baseUrl)
             .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)

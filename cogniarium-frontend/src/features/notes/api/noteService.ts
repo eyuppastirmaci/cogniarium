@@ -1,5 +1,5 @@
 import apiClient from '@/api/axiosClient';
-import type { Note, CreateNoteRequest } from '@/features/notes/types/Note';
+import type { Note, NoteRequest } from '@/features/notes/types/Note';
 
 export const noteService = {
   async getAllNotes(): Promise<Note[]> {
@@ -8,9 +8,19 @@ export const noteService = {
   },
 
   async createNote(text: string): Promise<Note> {
-    const payload: CreateNoteRequest = { text };
+    const payload: NoteRequest = { text };
     const response = await apiClient.post<Note>('/notes', payload);
     return response.data;
+  },
+
+  async updateNote(id: number, text: string): Promise<Note> {
+    const payload: NoteRequest = { text };
+    const response = await apiClient.put<Note>(`/notes/${id}`, payload);
+    return response.data;
+  },
+
+  async deleteNote(id: number): Promise<void> {
+    await apiClient.delete(`/notes/${id}`);
   },
 
   async searchNotes(query: string): Promise<Note[]> {

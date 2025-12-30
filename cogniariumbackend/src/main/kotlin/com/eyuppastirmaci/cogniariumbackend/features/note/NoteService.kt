@@ -3,21 +3,25 @@ package com.eyuppastirmaci.cogniariumbackend.features.note
 import com.eyuppastirmaci.cogniariumbackend.config.properties.BackendProperties
 import com.eyuppastirmaci.cogniariumbackend.features.note.mapper.NoteMapper
 import com.eyuppastirmaci.cogniariumbackend.features.note.websocket.NoteWebSocketService
-import com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.huggingface.HuggingFaceClient
+import com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.aiservice.AiServiceClient
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
+import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
+import org.springframework.transaction.support.TransactionTemplate
 import reactor.core.publisher.Mono
 import reactor.core.scheduler.Schedulers
 
 @Service
 class NoteService(
-    private val aiClient: HuggingFaceClient,
+    private val aiClient: AiServiceClient,
     private val noteRepository: NoteRepository,
     private val noteMapper: NoteMapper,
     private val webSocketService: NoteWebSocketService,
-    private val backendProperties: BackendProperties
+    private val backendProperties: BackendProperties,
+    transactionManager: PlatformTransactionManager
 ) {
+    private val transactionTemplate = TransactionTemplate(transactionManager)
 
     /**
      * Creates a note immediately without waiting for AI analysis.
@@ -47,6 +51,82 @@ class NoteService(
             aiClient.summarizeAsync(content, summaryCallbackUrl)
             aiClient.generateEmbeddingAsync(content, embeddingCallbackUrl)
         }
+    }
+
+    /**
+     * Updates a note's content immediately without waiting for AI analysis.
+     * Clears the old embedding and sends async requests to AI service for regeneration.
+     */
+    fun updateNote(noteId: Long, newContent: String): Mono<Note> {
+        return Mono.fromCallable {
+            // Execute all database operations within a transaction
+            transactionTemplate.execute { _ ->
+                // Find and update note immediately (blocking operation)
+                val note = noteRepository.findById(noteId)
+                    .orElseThrow { IllegalArgumentException("Note with id $noteId not found") }
+
+                // Update content and clear AI-generated fields
+                val updatedNote = note.copy(
+                    content = newContent,
+                    title = null,
+                    summary = null,
+                    sentimentLabel = null,
+                    sentimentScore = null
+                )
+                val savedNote = noteRepository.save(updatedNote)
+
+                // Clear old embedding (set to NULL) so it can be regenerated
+                // This must be done within the same transaction
+                noteRepository.clearEmbedding(noteId)
+
+                savedNote
+            }
+        }
+        .subscribeOn(Schedulers.boundedElastic())
+        .doOnNext { savedNote ->
+            // Broadcast note update via WebSocket
+            val noteResponse = noteMapper.toResponse(savedNote)
+            webSocketService.broadcastNoteUpdate(NoteUpdateType.NOTE_UPDATED, noteResponse)
+
+            // Fire async AI requests with callback URLs to regenerate all AI fields
+            val sentimentCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.sentiment}/${savedNote.id}"
+            val titleCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.title}/${savedNote.id}"
+            val summaryCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.summary}/${savedNote.id}"
+            val embeddingCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.embedding}/${savedNote.id}"
+
+            aiClient.analyzeSentiment(newContent, sentimentCallbackUrl)
+            aiClient.generateTitleAsync(newContent, titleCallbackUrl)
+            aiClient.summarizeAsync(newContent, summaryCallbackUrl)
+            aiClient.generateEmbeddingAsync(newContent, embeddingCallbackUrl)
+        }
+    }
+
+    /**
+     * Deletes a note and broadcasts the deletion via WebSocket.
+     * The embedding is automatically deleted when the note is deleted (database CASCADE).
+     */
+    fun deleteNote(noteId: Long): Mono<Void> {
+        return Mono.fromCallable {
+            // Execute deletion within a transaction
+            transactionTemplate.execute { _ ->
+                // Verify note exists
+                val note = noteRepository.findById(noteId)
+                    .orElseThrow { IllegalArgumentException("Note with id $noteId not found") }
+                
+                // Delete note (embedding will be automatically deleted by database)
+                noteRepository.deleteById(noteId)
+                
+                // Return note for WebSocket broadcast
+                note
+            }
+        }
+        .subscribeOn(Schedulers.boundedElastic())
+        .doOnNext { deletedNote ->
+            // Broadcast note deletion via WebSocket
+            val noteResponse = noteMapper.toResponse(deletedNote)
+            webSocketService.broadcastNoteUpdate(NoteUpdateType.NOTE_DELETED, noteResponse)
+        }
+        .then() // Convert to Mono<Void>
     }
 
     /**

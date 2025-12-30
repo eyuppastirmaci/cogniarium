@@ -57,4 +57,21 @@ interface NoteRepository : JpaRepository<Note, Long> {
         @Param("noteId") noteId: Long,
         @Param("embeddingString") embeddingString: String
     )
+
+    /**
+     * Clears the embedding of a note by setting it to NULL.
+     * Used when note content is updated and embedding needs to be regenerated.
+     * 
+     * @param noteId The ID of the note to clear embedding for
+     */
+    @Modifying(clearAutomatically = true)
+    @Query(
+        value = """
+            UPDATE notes 
+            SET embedding = NULL 
+            WHERE id = :noteId
+        """,
+        nativeQuery = true
+    )
+    fun clearEmbedding(@Param("noteId") noteId: Long)
 }

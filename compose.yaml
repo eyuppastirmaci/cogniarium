@@ -27,7 +27,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - hf_cache:/root/.cache/huggingface
+      - ai_cache:/root/.cache/huggingface
     restart: unless-stopped
 
   # Optional services (use --profile full to enable)
@@ -43,7 +43,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/cogniarium_db
       # Address where the backend will reach the AI service
-      - HUGGINGFACE_API_URL=http://ai-service:8000/analyze
+      - AI_SERVICE_API_URL=http://ai-service:8000/analyze
       # Backend base URL for callback construction (used by AI service to call back)
       - BACKEND_BASE_URL=http://backend:8080
     depends_on:
@@ -67,4 +67,4 @@ services:
 
 volumes:
   postgres_data:
-  hf_cache:
+  ai_cache:

@@ -7,9 +7,10 @@ import jakarta.validation.constraints.Size
 import java.time.LocalDateTime
 
 /**
- * DTO that receives data from the frontend.
+ * DTO that receives note content from the frontend.
+ * Used for both creating new notes and updating existing notes.
  */
-data class CreateNoteRequest(
+data class NoteRequest(
     @field:NotBlank(message = "Note content cannot be empty")
     @field:Size(min = 3, max = 2000, message = "Note content must be between 3 and 2000 characters")
     val text: String

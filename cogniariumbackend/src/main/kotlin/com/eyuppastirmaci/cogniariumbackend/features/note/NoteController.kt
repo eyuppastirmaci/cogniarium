@@ -1,9 +1,10 @@
 package com.eyuppastirmaci.cogniariumbackend.features.note
 
-import com.eyuppastirmaci.cogniariumbackend.features.note.dto.CreateNoteRequest
+import com.eyuppastirmaci.cogniariumbackend.features.note.dto.NoteRequest
 import com.eyuppastirmaci.cogniariumbackend.features.note.dto.NoteResponse
 import com.eyuppastirmaci.cogniariumbackend.features.note.mapper.NoteMapper
 import jakarta.validation.Valid
+import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import reactor.core.publisher.Mono
 
@@ -15,9 +16,24 @@ class NoteController(
 ) {
 
     @PostMapping
-    fun createNote(@Valid @RequestBody request: CreateNoteRequest): Mono<NoteResponse> {
+    fun createNote(@Valid @RequestBody request: NoteRequest): Mono<NoteResponse> {
         return noteService.createNote(request.text)
             .map { noteMapper.toResponse(it) }
+    }
+
+    @PutMapping("/{id}")
+    fun updateNote(
+        @PathVariable id: Long,
+        @Valid @RequestBody request: NoteRequest
+    ): Mono<NoteResponse> {
+        return noteService.updateNote(id, request.text)
+            .map { noteMapper.toResponse(it) }
+    }
+
+    @DeleteMapping("/{id}")
+    fun deleteNote(@PathVariable id: Long): Mono<ResponseEntity<Void>> {
+        return noteService.deleteNote(id)
+            .then(Mono.just(ResponseEntity.noContent().build()))
     }
 
     @GetMapping
