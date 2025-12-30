@@ -84,7 +84,7 @@ docker compose down
 
 ## Planned Features
 
-- [x] **Note Editing & Deletion:** Edit and delete existing notes (currently only creation is supported)
+- [x] **Note Editing & Deletion:** Edit and delete existing notes
 - [ ] **Authentication & Authorization:** User management, login/logout, session management for production use
 - [ ] **Pagination:** Implement pagination for note lists to improve performance and scalability (currently all notes are loaded at once)
 - [ ] **Error Handling & User Feedback:** Toast notifications, error messages, and better loading states for improved UX
