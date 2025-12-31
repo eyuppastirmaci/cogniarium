@@ -1,6 +1,8 @@
 services:
-  # Base services (always run): Database and AI Service
+  # Base services: Database and AI Service
+  # Use --profile base to run only infrastructure services (db, ai-service, mailhog)
   db:
+    profiles: ["base"]
     image: pgvector/pgvector:pg15
     container_name: cogniarium-db
     ports:
@@ -20,6 +22,7 @@ services:
     restart: unless-stopped
 
   ai-service:
+    profiles: ["base"]
     build:
       context: ./ai-service
       dockerfile: Dockerfile
@@ -30,7 +33,7 @@ services:
       - ai_cache:/root/.cache/huggingface
     restart: unless-stopped
 
-  # Optional services (use --profile full to enable)
+  # Application services (use --profile full to enable backend + frontend)
   backend:
     profiles: ["full"]
     build:
@@ -44,8 +47,9 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/cogniarium_db
       # Address where the backend will reach the AI service
       - AI_SERVICE_API_URL=http://ai-service:8000/analyze
-      # Backend base URL for callback construction (used by AI service to call back)
-      - BACKEND_BASE_URL=http://backend:8080
+      # Backend base URL for email links (accessible from host machine)
+      # When running in Docker, users access via host.docker.internal
+      - BACKEND_BASE_URL=http://host.docker.internal:8080
     depends_on:
       db:
         condition: service_healthy
@@ -65,6 +69,30 @@ services:
       - backend
     restart: unless-stopped
 
+  # MailHog - Email testing tool for development
+  # Access web UI at http://localhost:8025
+  mailhog:
+    profiles: ["base", "full", "mail"]
+    image: mailhog/mailhog:latest
+    container_name: cogniarium-mailhog
+    ports:
+      - "1025:1025"  # SMTP port
+      - "8025:8025"  # Web UI port
+    restart: unless-stopped
+
+  # Redis - Rate limiting and caching
+  redis:
+    profiles: ["base", "full"]
+    image: redis:7-alpine
+    container_name: cogniarium-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   ai_cache:
+  redis_data:

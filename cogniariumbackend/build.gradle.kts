@@ -34,6 +34,23 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.springframework.boot:spring-boot-starter-validation")
 
+	// Spring Security
+	implementation("org.springframework.boot:spring-boot-starter-security")
+	
+	// JWT Support
+	implementation("io.jsonwebtoken:jjwt-api:0.12.3")
+	implementation("io.jsonwebtoken:jjwt-impl:0.12.3")
+	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.3")
+	
+	// Spring Mail (Email sending)
+	implementation("org.springframework.boot:spring-boot-starter-mail")
+	
+	// Thymeleaf (Email templates)
+	implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+	
+	// Redis (Rate limiting and caching)
+	implementation("org.springframework.boot:spring-boot-starter-data-redis")
+
     runtimeOnly("org.postgresql:postgresql")
 
 	testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")

@@ -8,13 +8,25 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface NoteRepository : JpaRepository<Note, Long> {
+    
+    /**
+     * Finds all notes for a specific user.
+     */
+    fun findByUserIdOrderByCreatedAtDesc(userId: Long): List<Note>
+    
+    /**
+     * Finds a note by ID and user ID (for security).
+     */
+    fun findByIdAndUserId(id: Long, userId: Long): Note?
 
     /**
      * Semantic search using pgvector cosine similarity.
      * Searches for notes with embeddings similar to the provided query embedding.
      * Only returns notes that have embeddings (not null) and similarity above the threshold.
+     * Filters by user_id to ensure users only see their own notes.
      * 
      * @param queryEmbedding The embedding vector of the search query (384 dimensions)
+     * @param userId The user ID to filter notes by
      * @param maxDistance Maximum cosine distance threshold (0.0 = identical, 1.0 = completely different)
      *                    Lower distance = higher similarity. Recommended: 0.4-0.5 for good results
      * @param limit Maximum number of results to return
@@ -24,6 +36,7 @@ interface NoteRepository : JpaRepository<Note, Long> {
         value = """
             SELECT * FROM notes 
             WHERE embedding IS NOT NULL 
+            AND user_id = :userId
             AND (embedding <=> CAST(:queryEmbedding AS vector)) <= :maxDistance
             ORDER BY embedding <=> CAST(:queryEmbedding AS vector) 
             LIMIT :limit
@@ -32,6 +45,7 @@ interface NoteRepository : JpaRepository<Note, Long> {
     )
     fun searchByEmbedding(
         @Param("queryEmbedding") queryEmbedding: String,
+        @Param("userId") userId: Long,
         @Param("maxDistance") maxDistance: Double,
         @Param("limit") limit: Int
     ): List<Note>

@@ -1,5 +1,6 @@
 package com.eyuppastirmaci.cogniariumbackend.features.note
 
+import com.eyuppastirmaci.cogniariumbackend.features.user.User
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.persistence.*
 import java.time.LocalDateTime
@@ -28,6 +29,10 @@ data class Note(
     @Convert(converter = VectorConverter::class)
     val embedding: List<Float>? = null,
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    val user: User,
+
     val createdAt: LocalDateTime = LocalDateTime.now()
 ) {
     companion object {
@@ -38,6 +43,7 @@ data class Note(
         fun fromAiResponse(
             jsonResponse: String,
             content: String,
+            user: User,
             objectMapper: ObjectMapper
         ): Note {
             val resultMap = objectMapper.readValue(jsonResponse, Map::class.java)
@@ -55,7 +61,8 @@ data class Note(
             return Note(
                 content = content,
                 sentimentLabel = sentiment,
-                sentimentScore = score
+                sentimentScore = score,
+                user = user
             )
         }
 
@@ -63,13 +70,14 @@ data class Note(
          * Creates an initial Note without AI-generated data.
          * Title, summary, and sentiment will be generated asynchronously.
          */
-        fun createInitial(content: String): Note {
+        fun createInitial(content: String, user: User): Note {
             return Note(
                 content = content,
                 title = null,
                 summary = null,
                 sentimentLabel = null,
-                sentimentScore = null
+                sentimentScore = null,
+                user = user
             )
         }
     }

@@ -3,8 +3,8 @@ package com.eyuppastirmaci.cogniariumbackend.features.note
 import com.eyuppastirmaci.cogniariumbackend.config.properties.BackendProperties
 import com.eyuppastirmaci.cogniariumbackend.features.note.mapper.NoteMapper
 import com.eyuppastirmaci.cogniariumbackend.features.note.websocket.NoteWebSocketService
+import com.eyuppastirmaci.cogniariumbackend.features.user.UserRepository
 import com.eyuppastirmaci.cogniariumbackend.infrastructure.ai.aiservice.AiServiceClient
-import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
@@ -19,6 +19,7 @@ class NoteService(
     private val noteMapper: NoteMapper,
     private val webSocketService: NoteWebSocketService,
     private val backendProperties: BackendProperties,
+    private val userRepository: UserRepository,
     transactionManager: PlatformTransactionManager
 ) {
     private val transactionTemplate = TransactionTemplate(transactionManager)
@@ -26,44 +27,61 @@ class NoteService(
     /**
      * Creates a note immediately without waiting for AI analysis.
      * Sends async requests to AI service for sentiment and title generation.
+     * Requires user to be authenticated and email verified.
      */
-    fun createNote(content: String): Mono<Note> {
-        return Mono.fromCallable<Note> {
+    fun createNote(content: String, userId: Long): Mono<Note> {
+        return Mono.fromCallable {
+            // Load user and verify email is verified
+            val user = userRepository.findById(userId)
+                .orElseThrow { IllegalArgumentException("User not found") }
+
+            if (!user.emailVerified) {
+                throw IllegalStateException("Email must be verified to create notes")
+            }
+
             // Create and save note immediately (blocking operation)
-            // JPA repository.save() always returns non-null Note
-            val note = Note.createInitial(content)
+            val note = Note.createInitial(content, user)
             noteRepository.save(note)
         }
-        .subscribeOn(Schedulers.boundedElastic())
-        .doOnNext { savedNote ->
-            // Broadcast note creation via WebSocket
-            val noteResponse = noteMapper.toResponse(savedNote)
-            webSocketService.broadcastNoteUpdate(NoteUpdateType.NOTE_CREATED, noteResponse)
+            .subscribeOn(Schedulers.boundedElastic())
+            .doOnNext { savedNote ->
+                // Broadcast note creation via WebSocket
+                val noteResponse = noteMapper.toResponse(savedNote)
+                webSocketService.broadcastNoteUpdate(NoteUpdateType.NOTE_CREATED, noteResponse)
 
-            // Fire async AI requests with callback URLs
-            val sentimentCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.sentiment}/${savedNote.id}"
-            val titleCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.title}/${savedNote.id}"
-            val summaryCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.summary}/${savedNote.id}"
-            val embeddingCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.embedding}/${savedNote.id}"
+                // Fire async AI requests with callback URLs
+                val sentimentCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.sentiment}/${savedNote.id}"
+                val titleCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.title}/${savedNote.id}"
+                val summaryCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.summary}/${savedNote.id}"
+                val embeddingCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.embedding}/${savedNote.id}"
 
-            aiClient.analyzeSentiment(content, sentimentCallbackUrl)
-            aiClient.generateTitleAsync(content, titleCallbackUrl)
-            aiClient.summarizeAsync(content, summaryCallbackUrl)
-            aiClient.generateEmbeddingAsync(content, embeddingCallbackUrl)
-        }
+                aiClient.analyzeSentiment(content, sentimentCallbackUrl)
+                aiClient.generateTitleAsync(content, titleCallbackUrl)
+                aiClient.summarizeAsync(content, summaryCallbackUrl)
+                aiClient.generateEmbeddingAsync(content, embeddingCallbackUrl)
+            }
     }
 
     /**
      * Updates a note's content immediately without waiting for AI analysis.
      * Clears the old embedding and sends async requests to AI service for regeneration.
+     * Requires user to own the note and email verified.
      */
-    fun updateNote(noteId: Long, newContent: String): Mono<Note> {
+    fun updateNote(noteId: Long, newContent: String, userId: Long): Mono<Note> {
         return Mono.fromCallable {
             // Execute all database operations within a transaction
             transactionTemplate.execute { _ ->
-                // Find and update note immediately (blocking operation)
-                val note = noteRepository.findById(noteId)
-                    .orElseThrow { IllegalArgumentException("Note with id $noteId not found") }
+                // Find note by ID and user ID (security check)
+                val note = noteRepository.findByIdAndUserId(noteId, userId)
+                    ?: throw IllegalArgumentException("Note with id $noteId not found or access denied")
+
+                // Verify user email is verified
+                val user = userRepository.findById(userId)
+                    .orElseThrow { IllegalArgumentException("User not found") }
+
+                if (!user.emailVerified) {
+                    throw IllegalStateException("Email must be verified to update notes")
+                }
 
                 // Update content and clear AI-generated fields
                 val updatedNote = note.copy(
@@ -80,57 +98,59 @@ class NoteService(
                 noteRepository.clearEmbedding(noteId)
 
                 savedNote
+            } // Assert non-null result from transaction
+        }
+            .subscribeOn(Schedulers.boundedElastic())
+            .doOnNext { savedNote: Note ->
+                // Broadcast note update via WebSocket
+                val noteResponse = noteMapper.toResponse(savedNote)
+                webSocketService.broadcastNoteUpdate(NoteUpdateType.NOTE_UPDATED, noteResponse)
+
+                // Fire async AI requests with callback URLs to regenerate all AI fields
+                val sentimentCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.sentiment}/${savedNote.id}"
+                val titleCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.title}/${savedNote.id}"
+                val summaryCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.summary}/${savedNote.id}"
+                val embeddingCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.embedding}/${savedNote.id}"
+
+                aiClient.analyzeSentiment(newContent, sentimentCallbackUrl)
+                aiClient.generateTitleAsync(newContent, titleCallbackUrl)
+                aiClient.summarizeAsync(newContent, summaryCallbackUrl)
+                aiClient.generateEmbeddingAsync(newContent, embeddingCallbackUrl)
             }
-        }
-        .subscribeOn(Schedulers.boundedElastic())
-        .doOnNext { savedNote ->
-            // Broadcast note update via WebSocket
-            val noteResponse = noteMapper.toResponse(savedNote)
-            webSocketService.broadcastNoteUpdate(NoteUpdateType.NOTE_UPDATED, noteResponse)
-
-            // Fire async AI requests with callback URLs to regenerate all AI fields
-            val sentimentCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.sentiment}/${savedNote.id}"
-            val titleCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.title}/${savedNote.id}"
-            val summaryCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.summary}/${savedNote.id}"
-            val embeddingCallbackUrl = "${backendProperties.baseUrl}${backendProperties.callbacks.embedding}/${savedNote.id}"
-
-            aiClient.analyzeSentiment(newContent, sentimentCallbackUrl)
-            aiClient.generateTitleAsync(newContent, titleCallbackUrl)
-            aiClient.summarizeAsync(newContent, summaryCallbackUrl)
-            aiClient.generateEmbeddingAsync(newContent, embeddingCallbackUrl)
-        }
     }
 
     /**
      * Deletes a note and broadcasts the deletion via WebSocket.
      * The embedding is automatically deleted when the note is deleted (database CASCADE).
+     * Requires user to own the note.
      */
-    fun deleteNote(noteId: Long): Mono<Void> {
+    fun deleteNote(noteId: Long, userId: Long): Mono<Void> {
         return Mono.fromCallable {
             // Execute deletion within a transaction
             transactionTemplate.execute { _ ->
-                // Verify note exists
-                val note = noteRepository.findById(noteId)
-                    .orElseThrow { IllegalArgumentException("Note with id $noteId not found") }
-                
+                // Find note by ID and user ID (security check)
+                val note = noteRepository.findByIdAndUserId(noteId, userId)
+                    ?: throw IllegalArgumentException("Note with id $noteId not found or access denied")
+
                 // Delete note (embedding will be automatically deleted by database)
                 noteRepository.deleteById(noteId)
-                
+
                 // Return note for WebSocket broadcast
                 note
+            } // Assert non-null result from transaction
+        }
+            .subscribeOn(Schedulers.boundedElastic())
+            .doOnNext { deletedNote: Note ->
+                // Broadcast note deletion via WebSocket
+                val noteResponse = noteMapper.toResponse(deletedNote)
+                webSocketService.broadcastNoteUpdate(NoteUpdateType.NOTE_DELETED, noteResponse)
             }
-        }
-        .subscribeOn(Schedulers.boundedElastic())
-        .doOnNext { deletedNote ->
-            // Broadcast note deletion via WebSocket
-            val noteResponse = noteMapper.toResponse(deletedNote)
-            webSocketService.broadcastNoteUpdate(NoteUpdateType.NOTE_DELETED, noteResponse)
-        }
-        .then() // Convert to Mono<Void>
+            .then() // Convert to Mono<Void>
     }
 
     /**
-     * Updates the sentiment of a note and broadcasts the change via WebSocket
+     * Updates the sentiment of a note and broadcasts the change via WebSocket.
+     * Called by AI service callback - no user verification needed as it's internal.
      */
     fun updateSentiment(noteId: Long, label: Sentiment, score: Double): Note {
         val note = noteRepository.findById(noteId)
@@ -195,10 +215,10 @@ class NoteService(
 
         // Convert embedding to PostgreSQL vector string format
         val embeddingString = embedding.joinToString(",", "[", "]")
-        
+
         // Update using native SQL to properly cast to vector type
         noteRepository.updateEmbeddingNative(noteId, embeddingString)
-        
+
         // Refresh the entity to get the updated embedding
         val updatedNote = noteRepository.findById(noteId)
             .orElseThrow { IllegalArgumentException("Note with id $noteId not found after update") }
@@ -210,35 +230,39 @@ class NoteService(
         return updatedNote
     }
 
-    fun getAllNotes(): List<Note> {
-        // Sort from newest to oldest
-        return noteRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+    /**
+     * Gets all notes for a specific user.
+     * Returns notes sorted from newest to oldest.
+     */
+    fun getAllNotes(userId: Long): List<Note> {
+        return noteRepository.findByUserIdOrderByCreatedAtDesc(userId)
     }
 
     /**
      * Performs semantic search on notes using the provided query string.
      * Converts the query to an embedding and searches for similar notes.
      * Only returns notes with similarity above the configured threshold.
-     * 
-     * @param query The search query string
+     * Filters by user_id to ensure users only see their own notes.
+     * * @param query The search query string
+     * @param userId The user ID to filter notes by
      * @param limit Maximum number of results to return
      * @return List of notes ordered by similarity (most similar first)
      */
-    fun searchNotesSemantically(query: String, limit: Int = 10): List<Note> {
+    fun searchNotesSemantically(query: String, userId: Long, limit: Int = 10): List<Note> {
         if (query.isBlank()) {
             return emptyList()
         }
 
         // Generate embedding for the query
-        // Note: This is a synchronous call for search - in production you might want to cache embeddings
+        // TODO: use cache embeddings
         val embedding = aiClient.generateEmbeddingSync(query)
-        
+
         // Convert embedding to PostgreSQL vector string format
         val embeddingString = embedding.joinToString(",", "[", "]")
-        
-        // Search using the embedding with similarity threshold
+
+        // Search using the embedding with similarity threshold and user filter
         val maxDistance = backendProperties.search.maxSimilarityDistance
-        
-        return noteRepository.searchByEmbedding(embeddingString, maxDistance, limit)
+
+        return noteRepository.searchByEmbedding(embeddingString, userId, maxDistance, limit)
     }
 }

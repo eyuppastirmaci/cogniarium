@@ -21,6 +21,45 @@ spring:
         # Detailed statistics
         generate_statistics: false
 
+  # Redis Configuration for Development
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+  # Mail Configuration for Development
+  # Using MailHog for local email testing (http://localhost:8025 for web UI)
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    # Default sender email (can be overridden via environment variable)
+    from: ${MAIL_FROM:noreply@cogniarium.local}
+
+# Backend Configuration for Development
+# Default to localhost when running from IDE
+# When running in Docker, set BACKEND_BASE_URL environment variable to http://host.docker.internal:8080
+backend:
+  base-url: ${BACKEND_BASE_URL:http://localhost:8080}
+  callbacks:
+    sentiment: /api/callbacks/sentiment
+    title: /api/callbacks/title
+    summary: /api/callbacks/summary
+    embedding: /api/callbacks/embedding
+  search:
+    max-similarity-distance: 0.7
+
 # Logging Configuration for DEV
 logging:
   level:

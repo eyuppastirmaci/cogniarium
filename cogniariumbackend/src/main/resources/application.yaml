@@ -28,3 +28,9 @@ backend:
     # Lower = stricter matching, Higher = more lenient matching
     # Recommended: 0.6-0.8 for balanced results (0.7 is a good default)
     max-similarity-distance: 0.7
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-change-this-in-production-minimum-32-characters}
+  access-token-expiration: PT15M  # 15 minutes
+  refresh-token-expiration: P7D    # 7 days

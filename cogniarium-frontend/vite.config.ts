@@ -17,5 +17,10 @@ export default defineConfig({
   define: {
     // Polyfill for sockjs-client which expects Node.js 'global' variable
     global: 'globalThis'
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts']
   }
 })
